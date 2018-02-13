@@ -25,20 +25,10 @@ rn.seed(seed)
 units = [512] #[128, 256, 512]
 activation = ['tanh']
 
-def feature_scale(data):
-    data_mean = np.nanmean(data, axis=0)
-    data_std = np.nanstd(data, axis=0)
-    data_x = (data - data_mean)/data_std
-    data_x[data_x!=data_x] = 0.0
-        
-    return data_x
-                    
 
-#data = np.load('training_data.npy')
-#targets = np.load('training_targets.npy')
-
-data = np.load('rcw38_training_data_None.npy')
-targets = np.load('rcw38_training_targets_None.npy')
+data_dir = '../data/telescope_pointing/'
+data = np.load(os.path.join(data_dir,'rcw38_training_data_None.npy'))
+targets = np.load(os.path.join(data_dir,'rcw38_training_targets_None.npy'))
 
 data_x = feature_scale(data)
 
@@ -151,3 +141,12 @@ plt.legend(loc='best')
 
 
 
+#Script-specific functions
+
+def feature_scale(data):
+    data_mean = np.nanmean(data, axis=0)
+    data_std = np.nanstd(data, axis=0)
+    data_x = (data - data_mean)/data_std
+    data_x[data_x!=data_x] = 0.0
+        
+    return data_x
