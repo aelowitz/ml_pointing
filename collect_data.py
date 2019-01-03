@@ -5,9 +5,9 @@ import glob
 import os
 import sys
 
-def correct_tilts(data, tilts):
-    a2 = tilts[0]
-    a3 = tilts[1]
+def correct_az_tilt(data, pointing_params):
+    a2 = pointing_params[2]
+    a3 = pointing_params[3]
     az_rad = data['mean_az']*np.pi/180.
     el_rad = data['mean_el']*np.pi/180.
     
@@ -16,14 +16,71 @@ def correct_tilts(data, tilts):
 
     return d_az, d_el
 
+def correct_boom_flexure(data,pointing_params):
+    az_rad = data['mean_az']*np.pi/180.
+    el_rad = data['mean_el']*np.pi/180.
+    a0 = pointing_params[0]
+    a1 = pointing_params[1]
+    
+    d_az = 0.0
+    d_el = a0*np.sin(el_rad) + a1*np.cos(el_rad)
+
+    return d_az, d_el
+
+def correct_el_tilt(data,pointing_params):
+    az_rad = data['mean_az']*np.pi/180.
+    el_rad = data['mean_el']*np.pi/180.
+    a4 = pointing_params[4]
+    
+    d_az = a4*np.tan(el_rad)
+    d_el = 0.0
+
+    return d_az, d_el
+
+def correct_az_collimation(data,pointing_params):
+    az_rad = data['mean_az']*np.pi/180.
+    el_rad = data['mean_el']*np.pi/180.
+    a5 = pointing_params[5]
+    
+    d_az = - a5/np.cos(el_rad)
+    d_el = 0.0
+
+    return d_az, d_el
+
+    
+def correct_el_collimation(data, pointing_params):
+    a6 = pointing_params[6]
+
+    d_az = 0.0
+    d_el = -a6
+
+    return d_az, d_el
 
 
+def correct_az_zero(data, pointing_params):
+    az0 = pointing_params[7]
+    
+    d_az = - az0
+    d_el = 0.0
+
+    return d_az, d_el
+
+
+def correct_refraction(data):
+    el_rad = data['mean_el']*np.pi/180.
+    P = data['pressure_avg']
+    T = data['temp_avg']
+    n0_minus_1 = (77.6e-6)*(P/T)
+
+    d_az = 0.0
+    d_el = n0_minus_1/np.tan(el_rad)*180./np.pi
+
+    return d_az, d_el
 
     
 def extract_features(data, bs_offsets,
-                     tilts,
-                     source='rcw38',
-                     focus_position=-6.1):
+                     pointing_params,
+                     source='rcw38'):
     '''Take in data and extract the features we think are interesting.
     '''
 
@@ -100,12 +157,48 @@ def extract_features(data, bs_offsets,
     cleany = []
     try:
         for key in offsets.keys():
+            d_az = 0.0
+            d_el = 0.0
+            
             #Remove boresight offsets
             offsets[key]['xdeg'] -= bs_offsets[key]['xdeg']
             offsets[key]['ydeg'] -= bs_offsets[key]['ydeg']
 
-            #Remove tilts
-            d_az, d_el = correct_tilts(data, tilts)
+            #Remove az tilt
+            dd_az, dd_el = correct_az_tilt(data, pointing_params)
+            d_az += dd_az
+            d_el += dd_el
+
+            #Remove el tilt
+            #dd_az, dd_el = correct_el_tilt(data, pointing_params)
+            #d_az += dd_az
+            #d_el += dd_el
+
+            #Remove boom flexure
+            dd_az, dd_el = correct_boom_flexure(data, pointing_params)
+            d_az += dd_az
+            d_el += dd_el
+
+            #Remove az collimation
+            dd_az, dd_el = correct_az_collimation(data, pointing_params)
+            d_az += dd_az
+            d_el += dd_el
+
+            #Remove el collimation
+            #dd_az, dd_el = correct_el_collimation(data, pointing_params)
+            #d_az += dd_az
+            #d_el += dd_el
+
+            #Remove az0 offset
+            dd_az, dd_el = correct_az_zero(data, pointing_params)
+            d_az += dd_az
+            d_el += dd_el
+
+            #Remove refraction
+            #dd_az, dd_el = correct_refraction(data)
+            #d_az += dd_az
+            #d_el += dd_el
+            
             
             offsets[key]['xdeg'] -= d_az
             offsets[key]['ydeg'] -= d_el
@@ -123,18 +216,18 @@ def extract_features(data, bs_offsets,
     targets = np.array([[this_x, this_y]])
     
     #Now let's grab interesting info about the observation.
-    focus = np.array(data['focus_position'][0:3])
-    ext_temp = np.array([data['temp_avg']])
-    ext_pressure = np.array([data['pressure_avg']])
-    wind_dir = np.array([data['wind_dir_avg']])
-    wind_speed = np.array([data['wind_speed_avg']])
-    mean_az = np.array([data['mean_az']])
-    mean_el = np.array([data['mean_el']])
-    med_r1 = np.array([data['med_r1']])
-    med_r2 = np.array([data['med_r2']])
-    med_l1 = np.array([data['med_l1']])
-    med_l2 = np.array([data['med_l2']])
-    scu_temps = np.array(data['mean_scu_temp'])
+    focus = np.array(data['focus_position'][0:3]) #0-2
+    ext_temp = np.array([data['temp_avg']]) #3
+    ext_pressure = np.array([data['pressure_avg']]) #4
+    wind_dir = np.array([data['wind_dir_avg']]) #5
+    wind_speed = np.array([data['wind_speed_avg']]) #6
+    mean_az = np.array([data['mean_az']]) #7
+    mean_el = np.array([data['mean_el']]) #8
+    med_r1 = np.array([data['med_r1']]) #9
+    med_r2 = np.array([data['med_r2']]) #10
+    med_l1 = np.array([data['med_l1']]) #11
+    med_l2 = np.array([data['med_l2']]) #12
+    scu_temps = np.array(data['mean_scu_temp']) #13-
     
     these_features = np.concatenate((focus,ext_temp,ext_pressure,wind_dir,wind_speed,
                                      mean_az,mean_el,med_r1, med_r2, med_l1, med_l2,
@@ -145,24 +238,30 @@ def extract_features(data, bs_offsets,
 
 #################################
 #Load in data
-filenames = ['source_scan_structure_20150126_201300.pkl',
+filenames = [#'source_scan_structure_20150126_201200.pkl',
+             'source_scan_structure_20150126_201300.pkl',
              'source_scan_structure_20150126_201400.pkl',
-             'source_scan_structure_20161209_201500.pkl',
-             'source_scan_structure_20161209_201600.pkl']
+             #'source_scan_structure_20161209_201500.pkl',
+             #'source_scan_structure_20161209_201600.pkl']
+]
 
-sources = ['rcw38', 'mat5a']
+out_dir = '/Users/jhenning/codes/data/pointing'
+data_dir = '/Users/jhenning/codes/raw_data/'
+
+sources = ['rcw38']#, 'mat5a']
 focus = None #-6.4 
 
-bs_offsets = pk.load(open('boresight_bolo_offsets.pkl','r'))
+bs_offsets = pk.load(open(os.path.join(data_dir,'boresight_bolo_offsets.pkl'),'r'))
 
 data = []
 #Grab features we think are interesting.
 for k in range(len(filenames)):
-    d = pk.load(open(filenames[k],'r'))
-    tilts = np.load('tilt_params_'+filenames[k].split('.pkl')[0]+'.npy')
+    d = pk.load(open(os.path.join(data_dir,filenames[k]),'r'))
+    pointing_params = np.load(os.path.join(data_dir,'pointing_params_'+filenames[k].split('.pkl')[0]+'.npy'))
     for i in range(len(d)):
         for j in range(len(sources)):
-            this, this_target = extract_features(d[i], bs_offsets, tilts[i],
+            this, this_target = extract_features(d[i], bs_offsets,
+                                                 pointing_params[i],
                                                  source=sources[j])
 
             if (focus == None) or (np.abs(focus - this[0][0]) < 0.01):
@@ -188,13 +287,26 @@ good_idx1[np.array(list(set(np.where(targets == targets)[0])))] += 1
 #Cut large outliers.
 good_idx2 = np.ones(len(targets))
 targets_median = np.nanmedian(targets, axis=0)
-y = np.abs(targets - targets_median)
+y = targets - targets_median
 y[y!=y] = 1000.
-good_idx2[np.where(y[:,0] > 0.05)[0]] -= 1
-good_idx2[np.where(y[:,1] > 0.025)[0]] -= 1
+#good_idx2[np.where(y[:,0] > 0.03)[0]] -= 1
+#good_idx2[np.where(y[:,0] < -0.03)[0]] -= 1
+#good_idx2[np.where(y[:,1] > 0.0125)[0]] -= 1
+#good_idx2[np.where(y[:,1] < -0.02)[0]] -= 1
+#good_idx2[np.where((y[:,0] < 0.005) & (y[:,1] < -0.0075))[0]] -= 1
+
+good_idx2[np.where(targets[:,0] > 0.02)[0]] -= 1
+good_idx2[np.where(targets[:,0] < -0.105)[0]] -= 1
+good_idx2[np.where(targets[:,1] > 0.23)[0]] -= 1
+good_idx2[np.where(targets[:,1] < 0.19)[0]] -= 1
 good_idx2[good_idx2 < 1] = 0
 
 good_idx = np.array(good_idx1*good_idx2, dtype=bool)
 
-np.save('cut_training_data_'+str(focus)+'.npy', data[good_idx], allow_pickle=False)
-np.save('cut_training_targets_'+str(focus)+'.npy', targets[good_idx], allow_pickle=False)
+if len(sources) != 1:
+    np.save(os.path.join(out_dir,'training_data_'+str(focus)+'.npy'), data[good_idx], allow_pickle=False)
+    np.save(os.path.join(out_dir,'training_targets_'+str(focus)+'.npy'), targets[good_idx], allow_pickle=False)
+
+else:
+    np.save(os.path.join(out_dir,sources[0]+'_training_data_'+str(focus)+'.npy'), data[good_idx], allow_pickle=False)
+    np.save(os.path.join(out_dir,sources[0]+'_training_targets_'+str(focus)+'.npy'), targets[good_idx], allow_pickle=False)
