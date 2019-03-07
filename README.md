@@ -1,2 +1,4 @@
 # ml_pointing
-Machine learning to improve telescope boresight pointing reconstruction
+Machine learning to improve telescope boresight pointing reconstruction.  When making an observation, the commanded pointing of the telescope is recorded.  Due to real-world issues, the telescope does not, in fact, point where it is told.  Using ancillary data, the actual pointing can be reconstructed after the fact.  After fitting the telescope "pointing model", however, some residual jitter remains.  Here, we attempt a couple of different machine learning models, using information about the temperature and structure of the telescope during an observation, as well as local weather, to reduce the size of the jitter.
+
+Two models are given (a neural network and a random forest regressor).  Currently ,the RFR peforms best.  An example of its performance can be seen in test_residuals.pdf.  
