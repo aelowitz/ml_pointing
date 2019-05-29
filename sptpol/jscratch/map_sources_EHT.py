@@ -190,6 +190,16 @@ preprocessing_function_kwargs = []
 # We always read out with SPTDataReader.readData, so no need to specify a function for that.
 readout_kwargs = {'timestream_units':'watts', 
                   'correct_global_pointing':True}
+                  
+                  
+                  
+                  
+######################## functions below:
+#########   getTimeInterval()
+#########   getFilenameOut()
+#########   analyzeData()
+#########   writeData()                  
+                  
 
 def getTimeInterval():
     """

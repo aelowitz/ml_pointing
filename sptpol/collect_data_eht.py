@@ -5,7 +5,7 @@ import glob
 import os
 import sys
 
-
+'''looks at pkls of offsets and pulls out features we care about, saves them in a convenient format for training'''
 
     
 def extract_features(data):
